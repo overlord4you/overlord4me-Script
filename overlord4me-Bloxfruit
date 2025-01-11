@@ -1,0 +1,195 @@
+-- Overlord4Me Hub Script
+-- Features: Auto Farm, Auto Fruit Collection, Auto Store Fruits
+-- Includes: Messenger-Style Collapsible UI (Pop Head)
+-- Created by overlord4me
+
+-- Services
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+local tweenService = game:GetService("TweenService")
+local workspace = game:GetService("Workspace")
+local userInputService = game:GetService("UserInputService")
+
+-- Settings
+local autoFarmEnabled = false
+local autoFruitEnabled = false
+local fruitStoreEnabled = false
+
+-- Anti-AFK
+local virtualUser = game:GetService("VirtualUser")
+game:GetService("Players").LocalPlayer.Idled:Connect(function()
+    virtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+    wait(1)
+    virtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+end)
+
+-- GUI Setup
+local screenGui = Instance.new("ScreenGui", player.PlayerGui)
+local popHead = Instance.new("Frame", screenGui)
+local mainFrame = Instance.new("Frame", screenGui)
+local title = Instance.new("TextLabel", mainFrame)
+local autoFarmButton = Instance.new("TextButton", mainFrame)
+local autoFruitButton = Instance.new("TextButton", mainFrame)
+local fruitStoreButton = Instance.new("TextButton", mainFrame)
+local minimizeButton = Instance.new("TextButton", mainFrame)
+
+-- GUI Properties
+screenGui.Name = "Overlord4MeHub"
+
+popHead.Size = UDim2.new(0, 50, 0, 50)
+popHead.Position = UDim2.new(0, 20, 0.8, 0)
+popHead.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+popHead.Visible = true
+popHead.Text = ""
+popHead.BorderSizePixel = 0
+
+mainFrame.Size = UDim2.new(0, 300, 0, 300)
+mainFrame.Position = UDim2.new(0.5, -150, 0.5, -150)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.Visible = false
+
+title.Size = UDim2.new(1, 0, 0.2, 0)
+title.Position = UDim2.new(0, 0, 0, 0)
+title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+title.Text = "Overlord4Me Hub"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.SourceSans
+title.TextSize = 20
+
+autoFarmButton.Size = UDim2.new(1, 0, 0.2, -5)
+autoFarmButton.Position = UDim2.new(0, 0, 0.25, 0)
+autoFarmButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+autoFarmButton.Text = "Auto Farm: OFF"
+autoFarmButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+autoFarmButton.Font = Enum.Font.SourceSans
+autoFarmButton.TextSize = 18
+
+autoFruitButton.Size = UDim2.new(1, 0, 0.2, -5)
+autoFruitButton.Position = UDim2.new(0, 0, 0.5, 0)
+autoFruitButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+autoFruitButton.Text = "Auto Fruit: OFF"
+autoFruitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+autoFruitButton.Font = Enum.Font.SourceSans
+autoFruitButton.TextSize = 18
+
+fruitStoreButton.Size = UDim2.new(1, 0, 0.2, -5)
+fruitStoreButton.Position = UDim2.new(0, 0, 0.75, 0)
+fruitStoreButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+fruitStoreButton.Text = "Auto Store Fruits: OFF"
+fruitStoreButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+fruitStoreButton.Font = Enum.Font.SourceSans
+fruitStoreButton.TextSize = 18
+
+minimizeButton.Size = UDim2.new(0.2, 0, 0.15, 0)
+minimizeButton.Position = UDim2.new(0.8, 0, 0, 0)
+minimizeButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+minimizeButton.Text = "_"
+minimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+minimizeButton.Font = Enum.Font.SourceSans
+minimizeButton.TextSize = 20
+
+-- Pop Head Functionality
+popHead.MouseButton1Click:Connect(function()
+    mainFrame.Visible = true
+    popHead.Visible = false
+end)
+
+minimizeButton.MouseButton1Click:Connect(function()
+    mainFrame.Visible = false
+    popHead.Visible = true
+end)
+
+-- Smooth Teleport Function
+local function smoothTeleport(targetCFrame)
+    local tween = tweenService:Create(humanoidRootPart, TweenInfo.new(1), {CFrame = targetCFrame})
+    tween:Play()
+    tween.Completed:Wait()
+end
+
+-- Find Closest NPC Function
+local function findClosestNPC()
+    local closestNPC = nil
+    local closestDistance = math.huge
+    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+        if enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+            local distance = (enemy.HumanoidRootPart.Position - humanoidRootPart.Position).Magnitude
+            if distance < closestDistance then
+                closestNPC = enemy
+                closestDistance = distance
+            end
+        end
+    end
+    return closestNPC
+end
+
+-- Auto Farm Function
+local function autoFarm()
+    while autoFarmEnabled do
+        local npc = findClosestNPC()
+        if npc then
+            smoothTeleport(npc.HumanoidRootPart.CFrame + Vector3.new(0, 5, 0)) -- Teleport above NPC
+            repeat
+                wait(math.random(1, 3)) -- Random delay
+                pcall(function()
+                    player.Backpack:WaitForChild("WeaponName").Parent = character
+                    character:WaitForChild("WeaponName"):Activate()
+                end)
+            until npc.Humanoid.Health <= 0 or not npc.Parent
+        else
+            print("No NPCs nearby!")
+        end
+        wait(1)
+    end
+end
+
+-- Auto Fruit Collection
+local function autoCollectFruits()
+    while autoFruitEnabled do
+        for _, fruit in pairs(workspace:GetChildren()) do
+            if fruit:IsA("Tool") and fruit.Name == "Fruit" then
+                smoothTeleport(fruit.Handle.CFrame)
+                wait(math.random(1, 3))
+                print("Collected Fruit: " .. fruit.Name)
+            end
+        end
+        wait(5)
+    end
+end
+
+-- Auto Store Fruits
+local function autoStoreFruits()
+    while fruitStoreEnabled do
+        if player.Backpack:FindFirstChild("Fruit") then
+            local fruit = player.Backpack:FindFirstChild("Fruit")
+            print("Storing Fruit: " .. fruit.Name)
+            fruit.Parent = player.StarterGear
+        end
+        wait(5)
+    end
+end
+
+-- Button Functionality
+autoFarmButton.MouseButton1Click:Connect(function()
+    autoFarmEnabled = not autoFarmEnabled
+    autoFarmButton.Text = "Auto Farm: " .. (autoFarmEnabled and "ON" or "OFF")
+    if autoFarmEnabled then
+        spawn(autoFarm)
+    end
+end)
+
+autoFruitButton.MouseButton1Click:Connect(function()
+    autoFruitEnabled = not autoFruitEnabled
+    autoFruitButton.Text = "Auto Fruit: " .. (autoFruitEnabled and "ON" or "OFF")
+    if autoFruitEnabled then
+        spawn(autoCollectFruits)
+    end
+end)
+
+fruitStoreButton.MouseButton1Click:Connect(function()
+    fruitStoreEnabled = not fruitStoreEnabled
+    fruitStoreButton.Text = "Auto Store Fruits: " .. (fruitStoreEnabled and "ON" or "OFF")
+    if fruitStoreEnabled then
+        spawn(autoStoreFruits)
+    end
+end)
